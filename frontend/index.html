@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tríade CID — Demonstração Prática</title>
+<style>
+  :root {
+    --bg: #f5efe6;
+    --ink: #2b1d14;
+    --accent: #8b3a2f;
+    --accent-dark: #6d2d24;
+    --panel: #ffffff;
+    --muted: #6b5b4a;
+    --bad-bg: #fdecea;
+    --good-bg: #e8f5e9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    max-width: 980px;
+    margin: 2rem auto;
+    padding: 0 1rem 4rem;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  h1 {
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: .5rem;
+    margin-bottom: 1.5rem;
+  }
+  h1 small {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: var(--muted);
+    margin-top: .25rem;
+  }
+  section {
+    background: var(--panel);
+    border-left: 5px solid var(--accent);
+    padding: 1.25rem 1.5rem;
+    margin: 1.25rem 0;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  section h2 { margin: .25rem 0 .5rem; font-size: 1.25rem; }
+  section p { margin: .35rem 0; color: var(--muted); }
+  .tag {
+    display: inline-block;
+    background: var(--accent);
+    color: white;
+    padding: .15rem .6rem;
+    border-radius: 3px;
+    font-size: .72rem;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+  }
+  .tag.bad  { background: #b53a2c; }
+  .tag.good { background: #2e7d32; }
+  button {
+    background: var(--accent);
+    color: white;
+    border: 0;
+    padding: .55rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: .9rem;
+    margin: .35rem .35rem .35rem 0;
+    transition: background .15s;
+  }
+  button:hover { background: var(--accent-dark); }
+  button:disabled { background: #aaa; cursor: wait; }
+  button.ghost {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  button.ghost:hover { background: var(--accent); color: white; }
+  input, select {
+    font: inherit;
+    padding: .45rem .6rem;
+    border: 1px solid #c9bfae;
+    border-radius: 4px;
+    background: #fdfaf4;
+    margin: .15rem .35rem .35rem 0;
+    min-width: 180px;
+  }
+  label { font-size: .85rem; color: var(--muted); display: inline-block; margin-right: .5rem; }
+  pre {
+    background: #1e1a16;
+    color: #eadfd0;
+    padding: .9rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: .82rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 360px;
+    overflow-y: auto;
+  }
+  code { background: #eee2d0; padding: 1px 4px; border-radius: 3px; }
+  ul { margin: .25rem 0 .5rem 1.25rem; }
+
+  /* Modal de confirmação (slide 9) */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    display: none; align-items: center; justify-content: center;
+    z-index: 10;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: var(--panel);
+    border-radius: 6px;
+    padding: 1.5rem;
+    max-width: 420px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  }
+  .modal h3 { margin-top: 0; }
+</style>
+</head>
+<body>
+
+<h1>
+  Segurança em Sistemas da Informação — Demonstração
+  <small>Tríade CID · SQL Injection · JWT · UX Defensiva</small>
+</h1>
+
+<!-- ========================== CONFIDENCIALIDADE ========================== -->
+<section>
+  <span class="tag">CONFIDENCIALIDADE</span>
+  <h2>Não vazar segredos em respostas de erro</h2>
+  <p>
+    O endpoint <code>/api/leak-demo</code> lança de propósito um erro
+    contendo <b>API_KEY</b>, <b>senha de banco</b> e <b>JWT secret</b>.
+    O middleware de erros no servidor <b>redige</b> tudo antes de responder.
+  </p>
+  <ul>
+    <li>No <b>console do servidor</b> você verá o log completo (uso interno).</li>
+    <li>No <b>navegador</b>, abaixo, você verá apenas uma mensagem genérica.</li>
+  </ul>
+  <button id="btnLeakDemo">Disparar erro com segredos</button>
+  <pre id="out1">—</pre>
+</section>
+
+<!-- ========================== INTEGRIDADE ========================== -->
+<section>
+  <span class="tag">INTEGRIDADE</span>
+  <h2>Preço calculado no servidor (nunca confie no Front-End)</h2>
+  <p>
+    O navegador envia um carrinho em que tenta pagar
+    <b>R$ 0,03</b> por um Notebook + 2 Mouses. O servidor ignora o
+    <code>total</code> e os <code>price</code> enviados e recalcula
+    tudo pelo banco de dados.
+  </p>
+  <button id="btnFraud">Tentar fraudar total</button>
+  <button id="btnHonest">Checkout honesto (com cupom)</button>
+  <pre id="out2">—</pre>
+</section>
+
+<!-- ========================== DISPONIBILIDADE ========================== -->
+<section>
+  <span class="tag">DISPONIBILIDADE</span>
+  <h2>Balanceamento de carga com Node cluster</h2>
+  <p>
+    <code>/api/products/report</code> simula uma operação <b>pesada de CPU</b>.
+    Disparamos várias em paralelo: o <code>cluster</code> distribui entre
+    workers (um por núcleo). Veja <b>múltiplos PIDs</b> sendo usados —
+    evidência do balanceamento.
+  </p>
+  <button id="btnLoadTest">Rodar 8x /api/products/report</button>
+  <button id="btnHealth">Checar /api/health</button>
+  <pre id="out3">—</pre>
+</section>
+
+<!-- ========================== SQL INJECTION (slide 17) ========================== -->
+<section style="border-left-color:#b53a2c">
+  <span class="tag bad">SLIDE 17 — SQL INJECTION</span>
+  <h2>Ataque e Defesa lado a lado</h2>
+  <p>
+    Duas rotas de login no servidor: uma <b>vulnerável</b> (concatena SQL)
+    e uma <b>segura</b> (Prepared Statement). Tente o ataque clássico
+    em ambas.
+  </p>
+  <p><b>Usuários cadastrados:</b> <code>aluno / 123456</code> · <code>professor / admin</code></p>
+  <p><b>Payload de ataque sugerido:</b>
+    Username = <code>' OR 1=1 --</code> · Senha = <code>qualquer</code></p>
+
+  <div>
+    <label>Usuário <input id="sqlUser" value="' OR 1=1 --" /></label>
+    <label>Senha   <input id="sqlPass" type="password" value="qualquer" /></label>
+  </div>
+  <button id="btnLoginVuln" style="background:#b53a2c">Logar na rota VULNERÁVEL</button>
+  <button id="btnLoginSafe" style="background:#2e7d32">Logar na rota SEGURA</button>
+  <pre id="out4">—</pre>
+  <p style="font-size:.8rem">
+    Repare no campo <code>sqlExecutada</code>: na rota vulnerável o seu input
+    vira parte do comando. Na segura, o <code>?</code> mantém o input como
+    dado e o ataque falha.
+  </p>
+</section>
+
+<!-- ========================== JWT (slides 15-16) ========================== -->
+<section style="border-left-color:#2e7d32">
+  <span class="tag good">SLIDES 15-16 — JWT</span>
+  <h2>Autenticação por crachá digital</h2>
+  <p>
+    Faça login pela rota segura, guarde o token, e use-o para acessar
+    rotas protegidas. O token tem 3 partes (<b>Header.Payload.Signature</b>);
+    qualquer alteração no payload quebra a assinatura.
+  </p>
+
+  <div>
+    <label>Usuário
+      <select id="jwtUser">
+        <option value="aluno">aluno</option>
+        <option value="professor">professor</option>
+      </select>
+    </label>
+    <label>Senha <input id="jwtPass" type="password" placeholder="123456 ou admin" /></label>
+  </div>
+  <button id="btnJwtLogin">1. Login (gera token)</button>
+  <button id="btnJwtMe"     class="ghost">2. GET /api/me</button>
+  <button id="btnJwtSecrets" class="ghost">3. GET /api/secrets (RBAC)</button>
+  <button id="btnJwtAdmin"   class="ghost">4. GET /api/admin (só professor)</button>
+  <button id="btnJwtTamper"  style="background:#b53a2c">5. Adulterar token e tentar /me</button>
+  <button id="btnJwtLogout"  class="ghost">Logout</button>
+  <pre id="out5">—</pre>
+</section>
+
+<!-- ========================== UX DEFENSIVA (slides 8-10) ========================== -->
+<section>
+  <span class="tag">SLIDES 8-10 — UX DEFENSIVA</span>
+  <h2>Front-End como primeira camada de defesa</h2>
+  <p>
+    Pequenos cuidados de interface que reduzem a superfície de ataque
+    e melhoram a UX: máscara de input, popup de confirmação, botão
+    desabilitado após clique, loading visível.
+  </p>
+
+  <form id="formCadastro" onsubmit="event.preventDefault(); submeterCadastro();">
+    <label>Nome <input required maxlength="40" placeholder="Seu nome" /></label>
+    <label>E-mail <input required type="email" placeholder="voce@exemplo.com" /></label>
+    <label>CPF <input id="cpfMask" required inputmode="numeric" maxlength="14" placeholder="000.000.000-00" /></label>
+    <label>Telefone <input id="telMask" required inputmode="numeric" maxlength="15" placeholder="(00) 00000-0000" /></label>
+    <button id="btnCadastro" type="submit">Enviar com confirmação</button>
+  </form>
+  <pre id="out6">Preencha o formulário e clique em "Enviar".</pre>
+</section>
+
+<section style="border-left-color:#555">
+  <h2 style="margin-top:0">Endpoints disponíveis</h2>
+  <ul>
+    <li><code>GET  /api/health</code> — status + PID do worker</li>
+    <li><code>GET  /api/products</code> — lista o catálogo</li>
+    <li><code>GET  /api/products/report</code> — endpoint pesado (rate-limited)</li>
+    <li><code>POST /api/checkout</code> — recalcula total no servidor</li>
+    <li><code>GET  /api/leak-demo</code> — erro com segredos (redigidos)</li>
+    <li><code>POST /api/login-vulneravel</code> — slide 17, demo do ataque</li>
+    <li><code>POST /api/login-seguro</code> — slide 17, defesa com Prepared Statement</li>
+    <li><code>GET  /api/me</code> — slide 16, valida o token</li>
+    <li><code>GET  /api/secrets</code> — RBAC (aluno vs professor)</li>
+    <li><code>GET  /api/admin</code> — só professor</li>
+  </ul>
+</section>
+
+<!-- Modal de confirmação (slide 9) -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>Confirmar envio?</h3>
+    <p id="modalMsg">Esta ação não pode ser desfeita.</p>
+    <button id="modalOk">Confirmar</button>
+    <button id="modalCancel" class="ghost">Cancelar</button>
+  </div>
+</div>
+
+<script>
+  // ===== util =====
+  async function run(url, elId, opts) {
+    const el = document.getElementById(elId);
+    el.textContent = 'carregando...';
+    try {
+      const r = await fetch(url, opts);
+      const body = await r.json().catch(() => ({}));
+      el.textContent = `HTTP ${r.status} ${r.statusText}\n\n` + JSON.stringify(body, null, 2);
+      return { status: r.status, body };
+    } catch (e) {
+      el.textContent = 'erro de rede: ' + e.message;
+      return { status: 0, body: null };
+    }
+  }
+
+  function confirmar(mensagem) {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('modal');
+      document.getElementById('modalMsg').textContent = mensagem;
+      modal.classList.add('show');
+      const close = (val) => { modal.classList.remove('show'); resolve(val); };
+      document.getElementById('modalOk').onclick     = () => close(true);
+      document.getElementById('modalCancel').onclick = () => close(false);
+    });
+  }
+
+  // ===== checkout =====
+  function fraudulentCheckout() {
+    run('/api/checkout', 'out2', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: [
+          { id: 'p1', quantity: 1, price: 0.01 },
+          { id: 'p2', quantity: 2, price: 0.01 },
+        ],
+        total: 0.03,
+        couponCode: 'DESCONTO10',
+      }),
+    });
+  }
+
+  async function honestCheckout() {
+    const ok = await confirmar('Finalizar compra de Teclado + 2 Headsets com cupom BLACKFRIDAY?');
+    if (!ok) return;
+    run('/api/checkout', 'out2', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: [{ id: 'p3', quantity: 1 }, { id: 'p5', quantity: 2 }],
+        couponCode: 'BLACKFRIDAY',
+      }),
+    });
+  }
+
+  async function loadTest(n) {
+    const el = document.getElementById('out3');
+    el.textContent = `disparando ${n} requisições pesadas em paralelo...`;
+    const t0 = performance.now();
+    const results = await Promise.all(
+      Array.from({ length: n }, () =>
+        fetch('/api/products/report').then((r) => r.json())
+      )
+    );
+    const elapsed = Math.round(performance.now() - t0);
+    const pids = [...new Set(results.map((r) => r.workerPid))];
+    el.textContent =
+      `Concluído em ${elapsed} ms\n` +
+      `Workers utilizados (PIDs únicos): ${pids.join(', ')}\n` +
+      `(quanto mais PIDs diferentes, melhor a distribuição)\n\n` +
+      JSON.stringify(results, null, 2);
+  }
+
+  // ===== SQL Injection =====
+  function loginAttempt(rota) {
+    const username = document.getElementById('sqlUser').value;
+    const password = document.getElementById('sqlPass').value;
+    return run('/api/' + rota, 'out4', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+  }
+
+  // ===== JWT =====
+  let TOKEN = null;
+
+  async function jwtLogin() {
+    const username = document.getElementById('jwtUser').value;
+    const password = document.getElementById('jwtPass').value;
+    const { body } = await run('/api/login-seguro', 'out5', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (body && body.token) {
+      TOKEN = body.token;
+      document.getElementById('out5').textContent +=
+        '\n\n>> token salvo na variável TOKEN (memória da página).' +
+        '\n>> cole em jwt.io para inspecionar header/payload/signature.';
+    }
+  }
+
+  function authHeaders() {
+    return TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {};
+  }
+
+  function jwtMe()      { return run('/api/me',      'out5', { headers: authHeaders() }); }
+  function jwtSecrets() { return run('/api/secrets', 'out5', { headers: authHeaders() }); }
+  function jwtAdmin()   { return run('/api/admin',   'out5', { headers: authHeaders() }); }
+
+  function jwtTamper() {
+    if (!TOKEN) {
+      document.getElementById('out5').textContent = 'faça login primeiro.';
+      return;
+    }
+    // Decodifica o payload, troca role para "professor", reencoda — SEM recalcular
+    // a assinatura. O servidor deve rejeitar.
+    const [h, p, s] = TOKEN.split('.');
+    const payload = JSON.parse(atob(p.replace(/-/g, '+').replace(/_/g, '/')));
+    payload.role = 'professor';
+    const fakePayload = btoa(JSON.stringify(payload))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const tampered = `${h}.${fakePayload}.${s}`;
+    return run('/api/me', 'out5', { headers: { Authorization: 'Bearer ' + tampered } })
+      .then(() => {
+        document.getElementById('out5').textContent +=
+          '\n\n>> tentamos enviar role="professor" forjado. A assinatura não bate, servidor rejeita.';
+      });
+  }
+
+  function jwtLogout() {
+    TOKEN = null;
+    document.getElementById('out5').textContent = 'token descartado.';
+  }
+
+  // ===== UX defensiva: máscaras =====
+  function maskCPF(v) {
+    return v.replace(/\D/g, '').slice(0, 11)
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  }
+  function maskTel(v) {
+    const d = v.replace(/\D/g, '').slice(0, 11);
+    if (d.length <= 10) return d.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').trim();
+    return d.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').trim();
+  }
+
+  async function submeterCadastro() {
+    const ok = await confirmar('Confirmar envio dos dados de cadastro?');
+    if (!ok) return;
+    const btn = document.getElementById('btnCadastro');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+    document.getElementById('out6').textContent =
+      'simulando envio (sem rota real). Botão desabilitado para evitar duplo clique.';
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = 'Enviar com confirmação';
+      document.getElementById('out6').textContent = 'Cadastro enviado (simulação).';
+    }, 1500);
+  }
+
+  // ===== bind =====
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btnLeakDemo').addEventListener('click', () => run('/api/leak-demo', 'out1'));
+    document.getElementById('btnFraud').addEventListener('click', fraudulentCheckout);
+    document.getElementById('btnHonest').addEventListener('click', honestCheckout);
+    document.getElementById('btnLoadTest').addEventListener('click', () => loadTest(8));
+    document.getElementById('btnHealth').addEventListener('click', () => run('/api/health', 'out3'));
+
+    document.getElementById('btnLoginVuln').addEventListener('click', () => loginAttempt('login-vulneravel'));
+    document.getElementById('btnLoginSafe').addEventListener('click', () => loginAttempt('login-seguro'));
+
+    document.getElementById('btnJwtLogin').addEventListener('click', jwtLogin);
+    document.getElementById('btnJwtMe').addEventListener('click', jwtMe);
+    document.getElementById('btnJwtSecrets').addEventListener('click', jwtSecrets);
+    document.getElementById('btnJwtAdmin').addEventListener('click', jwtAdmin);
+    document.getElementById('btnJwtTamper').addEventListener('click', jwtTamper);
+    document.getElementById('btnJwtLogout').addEventListener('click', jwtLogout);
+
+    document.getElementById('cpfMask').addEventListener('input', (e) => { e.target.value = maskCPF(e.target.value); });
+    document.getElementById('telMask').addEventListener('input', (e) => { e.target.value = maskTel(e.target.value); });
+  });
+</script>
+</body>
+</html>

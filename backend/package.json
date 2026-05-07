@@ -1,0 +1,19 @@
+{
+  "name": "cid-security-backend",
+  "version": "1.1.0",
+  "description": "Back-End demonstrando a Tríade CID + JWT + SQL Injection (material de aula)",
+  "main": "cluster.js",
+  "scripts": {
+    "start": "node cluster.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "sql.js": "^1.10.3",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

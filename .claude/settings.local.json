@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(node server.js)",
+      "Bash(curl -s http://localhost:3000/api/health)",
+      "Bash(curl -s -X POST http://localhost:3000/api/login-vulneravel -H \"Content-Type: application/json\" -d \"{\\\\\"username\\\\\":\\\\\"' OR 1=1 --\\\\\",\\\\\"password\\\\\":\\\\\"qualquer\\\\\"}\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/login-seguro -H \"Content-Type: application/json\" -d \"{\\\\\"username\\\\\":\\\\\"' OR 1=1 --\\\\\",\\\\\"password\\\\\":\\\\\"qualquer\\\\\"}\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/login-seguro -H \"Content-Type: application/json\" -d \"{\\\\\"username\\\\\":\\\\\"professor\\\\\",\\\\\"password\\\\\":\\\\\"admin\\\\\"}\")",
+      "Bash(curl -s -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidXNlcm5hbWUiOiJwcm9mZXNzb3IiLCJyb2xlIjoicHJvZmVzc29yIiwiaWF0IjoxNzc4MTcxNDk3LCJleHAiOjE3NzgxNzIzOTd9.BzZ_f5yjXctAqw1_431t2a3ndqFw1Wq-35qhr-gHxWA' http://localhost:3000/api/me)",
+      "Bash(curl -s -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidXNlcm5hbWUiOiJwcm9mZXNzb3IiLCJyb2xlIjoicHJvZmVzc29yIiwiaWF0IjoxNzc4MTcxNDk3LCJleHAiOjE3NzgxNzIzOTd9.BzZ_f5yjXctAqw1_431t2a3ndqFw1Wq-35qhr-gHxWA' http://localhost:3000/api/secrets)",
+      "Bash(curl -s -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidXNlcm5hbWUiOiJwcm9mZXNzb3IiLCJyb2xlIjoicHJvZmVzc29yIiwiaWF0IjoxNzc4MTcxNDk3LCJleHAiOjE3NzgxNzIzOTd9.BzZ_f5yjXctAqw1_431t2a3ndqFw1Wq-35qhr-gHxWA' http://localhost:3000/api/admin)",
+      "Bash(curl -s http://localhost:3000/api/leak-demo)"
+    ]
+  }
+}
