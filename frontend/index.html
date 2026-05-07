@@ -119,6 +119,19 @@
     box-shadow: 0 8px 24px rgba(0,0,0,.25);
   }
   .modal h3 { margin-top: 0; }
+
+  /* Wrapper do campo de senha com toggle de visibilidade */
+  .pwd-wrap { position: relative; display: inline-block; margin-right: .35rem; }
+  .pwd-wrap input { padding-right: 2.2rem; margin-right: 0; }
+  .pwd-toggle {
+    position: absolute; right: .35rem; top: 50%;
+    transform: translateY(-50%);
+    background: transparent; color: var(--muted);
+    border: 0; padding: 0 .25rem; margin: 0;
+    cursor: pointer; font-size: 1rem; line-height: 1;
+  }
+  .pwd-toggle:hover { background: transparent; color: var(--accent); }
+  input:invalid:not(:placeholder-shown) { border-color: #b53a2c; background: #fdecea; }
 </style>
 </head>
 <body>
@@ -175,36 +188,9 @@
   <pre id="out3">—</pre>
 </section>
 
-<!-- ========================== SQL INJECTION (slide 17) ========================== -->
-<section style="border-left-color:#b53a2c">
-  <span class="tag bad">SLIDE 17 — SQL INJECTION</span>
-  <h2>Ataque e Defesa lado a lado</h2>
-  <p>
-    Duas rotas de login no servidor: uma <b>vulnerável</b> (concatena SQL)
-    e uma <b>segura</b> (Prepared Statement). Tente o ataque clássico
-    em ambas.
-  </p>
-  <p><b>Usuários cadastrados:</b> <code>aluno / 123456</code> · <code>professor / admin</code></p>
-  <p><b>Payload de ataque sugerido:</b>
-    Username = <code>' OR 1=1 --</code> · Senha = <code>qualquer</code></p>
-
-  <div>
-    <label>Usuário <input id="sqlUser" value="' OR 1=1 --" /></label>
-    <label>Senha   <input id="sqlPass" type="password" value="qualquer" /></label>
-  </div>
-  <button id="btnLoginVuln" style="background:#b53a2c">Logar na rota VULNERÁVEL</button>
-  <button id="btnLoginSafe" style="background:#2e7d32">Logar na rota SEGURA</button>
-  <pre id="out4">—</pre>
-  <p style="font-size:.8rem">
-    Repare no campo <code>sqlExecutada</code>: na rota vulnerável o seu input
-    vira parte do comando. Na segura, o <code>?</code> mantém o input como
-    dado e o ataque falha.
-  </p>
-</section>
-
 <!-- ========================== JWT (slides 15-16) ========================== -->
 <section style="border-left-color:#2e7d32">
-  <span class="tag good">SLIDES 15-16 — JWT</span>
+  <span class="tag good">JWT — AUTENTICAÇÃO</span>
   <h2>Autenticação por crachá digital</h2>
   <p>
     Faça login pela rota segura, guarde o token, e use-o para acessar
@@ -232,7 +218,7 @@
 
 <!-- ========================== UX DEFENSIVA (slides 8-10) ========================== -->
 <section>
-  <span class="tag">SLIDES 8-10 — UX DEFENSIVA</span>
+  <span class="tag">UX DEFENSIVA</span>
   <h2>Front-End como primeira camada de defesa</h2>
   <p>
     Pequenos cuidados de interface que reduzem a superfície de ataque
@@ -240,11 +226,32 @@
     desabilitado após clique, loading visível.
   </p>
 
-  <form id="formCadastro" onsubmit="event.preventDefault(); submeterCadastro();">
-    <label>Nome <input required maxlength="40" placeholder="Seu nome" /></label>
-    <label>E-mail <input required type="email" placeholder="voce@exemplo.com" /></label>
+  <form id="formCadastro" novalidate>
+    <label>Nome
+      <input id="nomeInput" required maxlength="40" placeholder="Seu nome"
+             pattern="[A-Za-zÀ-ÿ ]+"
+             title="Apenas letras e espaços" />
+    </label>
+    <label>E-mail
+      <input id="emailInput" required type="email"
+             placeholder="voce@exemplo.com"
+             pattern="[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.(com|org|net|edu|gov|io|br)"
+             title="Use um e-mail válido terminando em .com, .org, .net, .edu, .gov, .io ou .br" />
+    </label>
     <label>CPF <input id="cpfMask" required inputmode="numeric" maxlength="14" placeholder="000.000.000-00" /></label>
     <label>Telefone <input id="telMask" required inputmode="numeric" maxlength="15" placeholder="(00) 00000-0000" /></label>
+    <label>Senha
+      <span class="pwd-wrap">
+        <input id="senhaInput" type="password" required minlength="6" maxlength="64" placeholder="mínimo 6 caracteres" />
+        <button type="button" class="pwd-toggle" data-target="senhaInput" aria-label="Mostrar senha">👁</button>
+      </span>
+    </label>
+    <label>Confirmar senha
+      <span class="pwd-wrap">
+        <input id="senhaConfirmInput" type="password" required minlength="6" maxlength="64" placeholder="repita a senha" />
+        <button type="button" class="pwd-toggle" data-target="senhaConfirmInput" aria-label="Mostrar senha">👁</button>
+      </span>
+    </label>
     <button id="btnCadastro" type="submit">Enviar com confirmação</button>
   </form>
   <pre id="out6">Preencha o formulário e clique em "Enviar".</pre>
@@ -258,9 +265,8 @@
     <li><code>GET  /api/products/report</code> — endpoint pesado (rate-limited)</li>
     <li><code>POST /api/checkout</code> — recalcula total no servidor</li>
     <li><code>GET  /api/leak-demo</code> — erro com segredos (redigidos)</li>
-    <li><code>POST /api/login-vulneravel</code> — slide 17, demo do ataque</li>
-    <li><code>POST /api/login-seguro</code> — slide 17, defesa com Prepared Statement</li>
-    <li><code>GET  /api/me</code> — slide 16, valida o token</li>
+    <li><code>POST /api/login-seguro</code> — login com Prepared Statement</li>
+    <li><code>GET  /api/me</code> — valida o token JWT</li>
     <li><code>GET  /api/secrets</code> — RBAC (aluno vs professor)</li>
     <li><code>GET  /api/admin</code> — só professor</li>
   </ul>
@@ -350,17 +356,6 @@
       JSON.stringify(results, null, 2);
   }
 
-  // ===== SQL Injection =====
-  function loginAttempt(rota) {
-    const username = document.getElementById('sqlUser').value;
-    const password = document.getElementById('sqlPass').value;
-    return run('/api/' + rota, 'out4', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-  }
-
   // ===== JWT =====
   let TOKEN = null;
 
@@ -426,19 +421,44 @@
     return d.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').trim();
   }
 
+  function onlyLetters(v) {
+    return v.replace(/[^A-Za-zÀ-ÿ\s]/g, '');
+  }
+  function sanitizeEmail(v) {
+    return v.replace(/[^A-Za-z0-9._%+\-@]/g, '').toLowerCase();
+  }
+
   async function submeterCadastro() {
-    const ok = await confirmar('Confirmar envio dos dados de cadastro?');
-    if (!ok) return;
     const btn = document.getElementById('btnCadastro');
+    const out = document.getElementById('out6');
+    const form = document.getElementById('formCadastro');
+    const senha = document.getElementById('senhaInput').value;
+    const senha2 = document.getElementById('senhaConfirmInput').value;
+
+    if (!form.checkValidity()) {
+      out.textContent = 'Formulário inválido. Verifique os campos destacados.';
+      form.reportValidity();
+      return;
+    }
+    if (senha !== senha2) {
+      out.textContent = 'As senhas não coincidem.';
+      document.getElementById('senhaConfirmInput').focus();
+      return;
+    }
+    const ok = await confirmar('Confirmar envio dos dados de cadastro?');
+    if (!ok) {
+      out.textContent = 'Envio cancelado pelo usuário.';
+      return;
+    }
     btn.disabled = true;
     btn.textContent = 'Enviando...';
-    document.getElementById('out6').textContent =
+    out.textContent =
       'simulando envio (sem rota real). Botão desabilitado para evitar duplo clique.';
     setTimeout(() => {
       btn.disabled = false;
       btn.textContent = 'Enviar com confirmação';
-      document.getElementById('out6').textContent = 'Cadastro enviado (simulação).';
-    }, 1500);
+      out.textContent = 'Cadastro enviado (simulação).';
+    }, 4000);
   }
 
   // ===== bind =====
@@ -449,9 +469,6 @@
     document.getElementById('btnLoadTest').addEventListener('click', () => loadTest(8));
     document.getElementById('btnHealth').addEventListener('click', () => run('/api/health', 'out3'));
 
-    document.getElementById('btnLoginVuln').addEventListener('click', () => loginAttempt('login-vulneravel'));
-    document.getElementById('btnLoginSafe').addEventListener('click', () => loginAttempt('login-seguro'));
-
     document.getElementById('btnJwtLogin').addEventListener('click', jwtLogin);
     document.getElementById('btnJwtMe').addEventListener('click', jwtMe);
     document.getElementById('btnJwtSecrets').addEventListener('click', jwtSecrets);
@@ -461,6 +478,28 @@
 
     document.getElementById('cpfMask').addEventListener('input', (e) => { e.target.value = maskCPF(e.target.value); });
     document.getElementById('telMask').addEventListener('input', (e) => { e.target.value = maskTel(e.target.value); });
+
+    document.getElementById('nomeInput').addEventListener('input', (e) => {
+      e.target.value = onlyLetters(e.target.value);
+    });
+    document.getElementById('emailInput').addEventListener('input', (e) => {
+      e.target.value = sanitizeEmail(e.target.value);
+    });
+
+    document.querySelectorAll('.pwd-toggle').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.dataset.target);
+        const showing = input.type === 'text';
+        input.type = showing ? 'password' : 'text';
+        btn.textContent = showing ? '👁' : '🙈';
+        btn.setAttribute('aria-label', showing ? 'Mostrar senha' : 'Ocultar senha');
+      });
+    });
+
+    document.getElementById('formCadastro').addEventListener('submit', (e) => {
+      e.preventDefault();
+      submeterCadastro();
+    });
   });
 </script>
 </body>
