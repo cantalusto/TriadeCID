@@ -103,7 +103,7 @@
   code { background: #eee2d0; padding: 1px 4px; border-radius: 3px; }
   ul { margin: .25rem 0 .5rem 1.25rem; }
 
-  /* Tabela de clientes (slide 21) */
+  /* Tabela de clientes — Data Masking no banco */
   table.customers {
     width: 100%;
     border-collapse: collapse;
@@ -128,7 +128,7 @@
   table.customers tr.revealed td { background: #fff4ec; }
   table.customers .sensitive { font-family: ui-monospace, Menlo, monospace; }
 
-  /* Modal de confirmação (slide 9) */
+  /* Modal de confirmação */
   .modal-bg {
     position: fixed; inset: 0;
     background: rgba(0,0,0,.45);
@@ -213,7 +213,7 @@
   <pre id="out3">—</pre>
 </section>
 
-<!-- ========================== JWT (slides 15-16) ========================== -->
+<!-- ========================== JWT ========================== -->
 <section style="border-left-color:#2e7d32">
   <span class="tag good">JWT — AUTENTICAÇÃO</span>
   <h2>Autenticação por crachá digital</h2>
@@ -241,7 +241,7 @@
   <pre id="out5">—</pre>
 </section>
 
-<!-- ========================== UX DEFENSIVA (slides 8-10) ========================== -->
+<!-- ========================== UX DEFENSIVA ========================== -->
 <section>
   <span class="tag">UX DEFENSIVA</span>
   <h2>Front-End como primeira camada de defesa</h2>
@@ -282,15 +282,15 @@
   <pre id="out6">Preencha o formulário e clique em "Enviar".</pre>
 </section>
 
-<!-- ========================== DATA MASKING (slide 21) + AUDITORIA (slide 22) ========================== -->
+<!-- ========================== DATA MASKING + AUDITORIA NO BANCO ========================== -->
 <section style="border-left-color:#f0a020">
-  <span class="tag" style="background:#c97a14">SLIDES 21-22 — DATA MASKING + AUDITORIA</span>
+  <span class="tag" style="background:#c97a14">BANCO DE DADOS — DATA MASKING + AUDITORIA</span>
   <h2>Mascaramento atravessando as 3 camadas</h2>
   <p>
     O banco guarda <b>CPF, cartão e telefone completos</b>. O back-end
     aplica máscara antes de devolver — todo aluno vê dados parciais.
     Só professor pode pedir os dados completos, e cada revelação é
-    registrada em uma <b>tabela de auditoria</b> (slide 22).
+    registrada em uma <b>tabela de auditoria</b> no banco.
   </p>
   <p><b>Faça login primeiro na seção JWT acima</b> (use <code>professor / admin</code> para testar reveal).</p>
 
@@ -318,13 +318,13 @@
     <li><code>GET  /api/me</code> — valida o token JWT</li>
     <li><code>GET  /api/secrets</code> — RBAC (aluno vs professor)</li>
     <li><code>GET  /api/admin</code> — só professor</li>
-    <li><code>GET  /api/customers</code> — slide 21, dados mascarados</li>
-    <li><code>GET  /api/customers?reveal=true</code> — slide 21, completo (auditado)</li>
-    <li><code>GET  /api/customers/audit-log</code> — slide 22, log forense</li>
+    <li><code>GET  /api/customers</code> — dados mascarados pelo back-end</li>
+    <li><code>GET  /api/customers?reveal=true</code> — completo (só professor, auditado)</li>
+    <li><code>GET  /api/customers/audit-log</code> — log forense de acessos</li>
   </ul>
 </section>
 
-<!-- Modal de confirmação (slide 9) -->
+<!-- Modal de confirmação -->
 <div class="modal-bg" id="modal">
   <div class="modal">
     <h3>Confirmar envio?</h3>
@@ -460,7 +460,7 @@
     document.getElementById('out5').textContent = 'token descartado.';
   }
 
-  // ===== Data Masking + Auditoria (slides 21-22) =====
+  // ===== Data Masking + Auditoria no banco =====
   function renderCustomersTable(payload) {
     const el = document.getElementById('customersTable');
     if (!payload || !Array.isArray(payload.customers)) {
