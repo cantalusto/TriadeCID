@@ -9,6 +9,7 @@ const { globalLimiter, heavyLimiter } = require('./middleware/rateLimiter');
 const productsRoute = require('./routes/products');
 const checkoutRoute = require('./routes/checkout');
 const authRoute = require('./routes/auth');
+const customersRoute = require('./routes/customers');
 const { init: initUsersDb } = require('./usersDb');
 
 const app = express();
@@ -55,6 +56,7 @@ app.use('/api/products/report', heavyLimiter);
 app.use('/api/products', productsRoute);
 app.use('/api/checkout', checkoutRoute);
 app.use('/api', authRoute); // /api/login-vulneravel, /api/login-seguro, /api/me, /api/secrets, /api/admin
+app.use('/api/customers', customersRoute); // /api/customers + /api/customers/audit-log (slides 21-22)
 
 // 404 genérico (sem revelar rotas internas).
 app.use((_req, res) => {

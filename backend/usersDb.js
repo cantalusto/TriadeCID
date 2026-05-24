@@ -29,6 +29,31 @@ async function init() {
       owner   TEXT NOT NULL,
       content TEXT NOT NULL
     );
+
+    -- ===== SLIDE 21 — DATA MASKING =====
+    -- O banco guarda o dado COMPLETO. A máscara é aplicada na CAMADA DE
+    -- BACK-END, antes de devolver para o front, conforme o papel do usuário.
+    CREATE TABLE customers (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      name         TEXT NOT NULL,
+      email        TEXT NOT NULL,
+      cpf          TEXT NOT NULL,
+      phone        TEXT NOT NULL,
+      credit_card  TEXT NOT NULL
+    );
+
+    -- ===== SLIDE 22 — AUDITORIA E LOGS =====
+    -- Registra TODA tentativa de leitura de dado sensível em texto pleno.
+    -- Mesmo o professor (quem pode revelar) fica registrado — é a prova
+    -- forense em caso de vazamento.
+    CREATE TABLE data_access_log (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      timestamp   TEXT NOT NULL,
+      username    TEXT NOT NULL,
+      role        TEXT NOT NULL,
+      action      TEXT NOT NULL,
+      target      TEXT NOT NULL
+    );
   `);
 
   // Seed: dois usuários para a aula. Senhas óbvias de propósito.
@@ -46,6 +71,28 @@ async function init() {
   insertNote.run(['professor', 'Salário do diretor: R$ 42.000,00']);
   insertNote.run(['aluno',     'Lembrar de estudar para a prova de quarta']);
   insertNote.free();
+
+  // Seed: 5 clientes fictícios com dados sensíveis "reais".
+  // Estes valores existem APENAS aqui — em produção viriam de cadastro real.
+  const insertCustomer = database.prepare(
+    'INSERT INTO customers (name, email, cpf, phone, credit_card) VALUES (?, ?, ?, ?, ?)'
+  );
+  insertCustomer.run(['Ana Souza',      'ana.souza@email.com',     '12345678901', '11987654321', '4539578763621486']);
+  insertCustomer.run(['Bruno Lima',     'bruno.lima@email.com',    '98765432100', '21912345678', '5412751234567890']);
+  insertCustomer.run(['Carla Mendes',   'carla.mendes@email.com',  '45678912345', '31988887777', '4716123456789012']);
+  insertCustomer.run(['Diego Pereira',  'diego.p@email.com',       '32165498700', '41999998888', '5500000000000004']);
+  insertCustomer.run(['Eduarda Castro', 'edu.castro@email.com',    '78945612300', '51977776666', '4024007112345678']);
+  insertCustomer.free();
+}
+
+// Helper para registrar acesso a dado sensível na tabela de auditoria.
+// Chamado pelas rotas que tocam em CPF/cartão/etc em texto pleno.
+function logAccess({ username, role, action, target }) {
+  const stmt = database.prepare(
+    'INSERT INTO data_access_log (timestamp, username, role, action, target) VALUES (?, ?, ?, ?, ?)'
+  );
+  stmt.run([new Date().toISOString(), username, role, action, target]);
+  stmt.free();
 }
 
 // Wrapper com a mesma cara de better-sqlite3 — facilita a leitura nas rotas.
@@ -79,4 +126,4 @@ const db = {
   },
 };
 
-module.exports = { db, init };
+module.exports = { db, init, logAccess };

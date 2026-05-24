@@ -57,7 +57,8 @@ TriadeCID-main/
 │   ├── server.js                 ← Configura Express, helmet, rotas
 │   ├── cluster.js                ← Disponibilidade: cria múltiplos workers
 │   ├── database.js               ← Catálogo de produtos (Map em memória)
-│   ├── usersDb.js                ← SQLite (WASM) com tabela de usuários
+│   ├── usersDb.js                ← SQLite (WASM): users, customers, audit_log
+│   ├── dbMasking.js              ← (3º ciclo) Funções de máscara de dados
 │   │
 │   ├── middleware/
 │   │   ├── errorHandler.js       ← Confidencialidade: redige segredos em erros
@@ -67,7 +68,8 @@ TriadeCID-main/
 │   ├── routes/
 │   │   ├── products.js           ← GET /api/products + /report (pesado)
 │   │   ├── checkout.js           ← Integridade: recalcula preço no servidor
-│   │   └── auth.js               ← Login (vulnerável + seguro), /me, RBAC
+│   │   ├── auth.js               ← Login (vulnerável + seguro), /me, RBAC
+│   │   └── customers.js          ← (3º ciclo) Data Masking + Auditoria
 │   │
 │   ├── package.json              ← Dependências (express, helmet, sql.js…)
 │   └── .env.example              ← Variáveis de ambiente de exemplo
@@ -93,7 +95,11 @@ TriadeCID-main/
 | **Slides 15-16** | JWT (Header.Payload.Signature, Login → Emissão → Uso → Validação) | `middleware/auth.js` + `routes/auth.js` |
 | **Slide 17** | SQL Injection vs Prepared Statement | `routes/auth.js` (rotas `login-vulneravel` e `login-seguro`) |
 | **Slide 18** | Armazenamento (banco real) | `usersDb.js` (SQLite via sql.js/WASM) |
-| **Slide 19** | Infraestrutura | `cluster.js` (load balancer com Node cluster) |
+| **Slide 19 (3º ciclo)** | Segurança estrutural no banco — última fronteira de defesa | `usersDb.js` + `dbMasking.js` + `routes/customers.js` |
+| **Slide 20 (3º ciclo)** | Tríade CID no banco (confidencialidade via máscara, integridade via auditoria) | `dbMasking.js` + tabela `data_access_log` |
+| **Slide 21 (3º ciclo)** | Hashing (✅ bcrypt em `usersDb.js`) + **Data Masking** + Menor Privilégio | `dbMasking.js` + `routes/customers.js` |
+| **Slide 22 (3º ciclo)** | Auditoria e Logs (registro forense de quem acessou o quê) | tabela `data_access_log` + `GET /api/customers/audit-log` |
+| **Slide 23 (3º ciclo)** | Infraestrutura | `cluster.js` |
 
 ---
 
@@ -300,6 +306,106 @@ cole o token. Os três blocos coloridos aparecem decodificados.
 
 ---
 
+### Seção 7 — Data Masking + Auditoria *(Slides 21-22 — 3º CICLO, ENTREGA INDIVIDUAL)*
+
+**Esta é a entrega nova do 3º ciclo.** O professor pediu para escolher
+**uma técnica do slide 21** e mostrá-la atravessando as 3 camadas
+(front, back, banco). Escolhi **Data Masking** (o exemplo que ele
+próprio citou no áudio) e adicionei **Auditoria** (slide 22) como
+reforço — porque uma coisa puxa a outra: se você revela dados, precisa
+registrar quem fez isso.
+
+#### A técnica em uma frase
+
+> **O banco guarda o dado completo. Quem decide o que mostrar é o
+> back-end, com base no papel do usuário. O front só recebe — e só
+> exibe — o que o back permitiu.**
+
+#### Setup
+
+Antes de apresentar esta seção, faça **login pela seção JWT** como
+`professor / admin` (ou como `aluno / 123456` para comparar). O token
+ficará salvo na variável `TOKEN` da página.
+
+#### Demo passo a passo
+
+**Passo 1 — Login como aluno.** Vá na seção JWT, logue como
+`aluno / 123456`. Volte para a seção Data Masking.
+
+**Passo 2 — "Listar clientes (mascarado)".**
+> "Esses são 5 clientes da nossa base. Repare nos campos sensíveis:
+> CPF aparece como `***.***.***-01`, cartão como `**** **** **** 1486`,
+> telefone como `(11) ****-4321`. **O dado completo existe no banco**
+> — você pode confirmar abrindo o `usersDb.js` —, mas o back-end aplica
+> a máscara antes de devolver."
+
+**Passo 3 — "Revelar dados completos" (ainda como aluno).**
+> "Vou tentar burlar pedindo `?reveal=true`. O front-end manda o
+> parâmetro, mas o servidor verifica o `role` do token: não é professor,
+> ignora o pedido e devolve mascarado mesmo. **Princípio do menor
+> privilégio** (slide 21) e mesma regra do checkout: front não é fonte
+> de verdade para autorização."
+
+**Passo 4 — Logout, logue como professor**, volte para a seção.
+
+**Passo 5 — "Listar clientes" como professor.**
+> "Mesmo o professor recebe mascarado por padrão. A premissa é:
+> ninguém precisa ver CPF completo o tempo todo. A revelação tem que
+> ser um ato consciente."
+
+**Passo 6 — "Revelar dados completos".**
+> "Agora sim: aparecem CPFs e cartões completos, e a tabela fica com
+> fundo destacado para sinalizar visualmente que estamos vendo dado
+> sensível. Note o aviso no JSON: 'Acesso registrado na auditoria.'"
+
+**Passo 7 — "Ver log de auditoria".**
+> "Aqui está a outra metade da história. Toda leitura — tanto as
+> mascaradas quanto as reveladas — fica registrada em uma tabela
+> `data_access_log` no banco com `timestamp`, `username`, `role`,
+> `action` e `target`. Se amanhã o cartão da Ana Souza vazar, eu sei
+> exatamente quem viu e quando. É a 'análise forense' do slide 22."
+
+#### Onde mostrar o código (3 arquivos)
+
+1. **Banco** — `backend/usersDb.js` linhas 33-44 (tabela `customers`
+   armazenando dados completos) e linhas 75-79 (helper `logAccess`
+   gravando na `data_access_log`).
+2. **Back-end / regras** — `backend/dbMasking.js` (funções `maskCPF`,
+   `maskCreditCard`, `maskEmail`, `maskPhone`, `maskCustomer`).
+3. **Back-end / rota** — `backend/routes/customers.js` (decide
+   mascarar/revelar baseado em `req.user.role` E em `?reveal=true`,
+   e chama `logAccess` em todos os caminhos).
+4. **Front-end** — `frontend/index.html` seção "SLIDES 21-22 —
+   DATA MASKING + AUDITORIA" e função `renderCustomersTable`.
+
+#### Pontos a destacar
+
+- **A máscara NÃO está no front nem no banco — está no back.** Essa é
+  a escolha arquitetural mais importante. Mascarar só no front é
+  inútil (basta abrir DevTools). Mascarar no banco perde o dado para
+  sempre. No back, é flexível e auditável.
+- **Aluno mesmo com `?reveal=true` continua mascarado.** É a regra
+  do "front-end não é fonte de verdade" voltando — mesma lição do
+  checkout, mas em outro contexto.
+- **Auditoria registra todo mundo, inclusive o professor.** Não tem
+  exceção; quem libera, é registrado. É o oposto de "confiar pelo
+  cargo".
+- Em produção, a `data_access_log` ficaria em um banco separado,
+  append-only, idealmente em um sistema imutável (S3 Object Lock,
+  por exemplo) — para que nem o admin do banco principal consiga
+  apagar evidências. Isso é o slide 22 falando de "ambientes
+  separados e imutáveis" para defesa contra ransomware.
+
+#### Frase de fechamento da seção
+
+> *"Repare como uma única técnica — máscara — só funciona porque as
+> 3 camadas cooperam: banco entrega o dado bruto, back-end decide o
+> que mostrar conforme quem está pedindo, e front-end exibe sem
+> questionar. É o slide 5 (pirâmide das 4 camadas) na prática:
+> segurança não vive em uma camada só, vive na conversa entre elas."*
+
+---
+
 ## 6. Tira-dúvidas técnico (caso o professor pergunte)
 
 ### "Por que SQLite e não MySQL/PostgreSQL?"
@@ -346,6 +452,35 @@ ataque funcionar localmente.
 enviou e o que o servidor decidiu. Em produção esse campo não
 existiria — o servidor responderia só com o `total` autoritativo.
 
+### "Por que escolheu Data Masking entre as 4 técnicas do slide 21?"
+Três motivos:
+1. Foi o **exemplo que o professor citou no áudio** ao explicar a entrega.
+2. É a técnica que **mais visivelmente atravessa as 3 camadas** — front,
+   back e banco —, exatamente o que ele pediu para demonstrar.
+3. **Hashing já estava feito** desde o 2º ciclo (bcrypt em `usersDb.js`).
+   Implementar masking complementa, em vez de repetir.
+
+### "Por que NÃO escolheu Criptografia em Repouso?"
+Em produção é absolutamente válida — eu poderia ter cifrado a coluna
+`cpf` com AES-256 e descriptografado no back-end. Mas para uma
+**aula presencial** ela é difícil de demonstrar: o "antes/depois"
+exigiria abrir o arquivo `.db` em editor binário. Masking é
+imediatamente visível na tela.
+
+### "A máscara não poderia ser feita no banco com VIEWS?"
+Tecnicamente sim — bancos como SQL Server e Oracle têm "Dynamic Data
+Masking" nativo. A escolha de fazer no back-end aqui é didática:
+o aluno vê a função `maskCPF()` em JavaScript, entende o que está
+acontecendo, e a mesma lógica vale para qualquer banco. Em produção,
+o ideal é **combinar**: máscara no banco como rede de segurança +
+máscara no back como camada de controle.
+
+### "Por que registra acesso até de quem só vê dado mascarado?"
+Padrão de auditoria moderno: você quer saber **quem acessou o
+recurso**, mesmo que tenha visto pouco. Se 10 mil aluno-logins
+consultaram a lista de clientes em 1 minuto, isso é um sinal de
+scraping mesmo sem revelação. O log é a evidência forense.
+
 ### "Posso mostrar o ataque com Postman/Insomnia em vez do front?"
 Sim. O front é só açúcar. Os endpoints aceitam `curl`, Postman,
 Insomnia, ou qualquer cliente HTTP. Exemplo de ataque por linha de
@@ -372,6 +507,9 @@ curl -X POST http://localhost:3000/api/login-vulneravel \
 | `GET`  | `/api/me` | **slide 16** — exige Bearer token |
 | `GET`  | `/api/secrets` | RBAC: aluno vê só as próprias |
 | `GET`  | `/api/admin` | só `role=professor` |
+| `GET`  | `/api/customers` | **slide 21** — Data Masking |
+| `GET`  | `/api/customers?reveal=true` | **slide 21** — só professor, auditado |
+| `GET`  | `/api/customers/audit-log` | **slide 22** — log forense |
 
 ---
 
@@ -393,9 +531,11 @@ Se você só tiver 30 segundos para explicar o projeto:
 > "É um e-commerce de demonstração em Node.js + Express que implementa
 > os três pilares da Tríade CID — Confidencialidade, Integridade,
 > Disponibilidade — mais Autenticação com JWT, defesa contra SQL
-> Injection com Prepared Statements, e UX defensiva no front-end.
-> Cada slide do PDF tem uma rota correspondente que pode ser clicada
-> em <http://localhost:3000>."
+> Injection com Prepared Statements, UX defensiva no front-end, e,
+> na entrega do 3º ciclo, **Data Masking + Auditoria no banco de
+> dados**, mostrando uma técnica de proteção atravessando as 3 camadas
+> (front → back → banco). Cada slide do PDF tem uma rota correspondente
+> que pode ser clicada em <http://localhost:3000>."
 
 ---
 

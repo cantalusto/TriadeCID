@@ -13,6 +13,8 @@ Cada conceito dos slides vira uma rota clicável no navegador.
 | 14 | Tríade CID no back-end | rotas + `cluster.js` |
 | 15-16 | Autenticação com JWT (Header.Payload.Signature + RBAC) | `middleware/auth.js`, `routes/auth.js` |
 | 17 | SQL Injection: ataque vs Prepared Statement | `routes/auth.js` (rotas `login-vulneravel` e `login-seguro`) |
+| **21 (3º ciclo)** | **Data Masking** atravessando front + back + banco | `dbMasking.js`, `routes/customers.js` |
+| **22 (3º ciclo)** | **Auditoria e Logs** (forense de acessos) | tabela `data_access_log`, `GET /api/customers/audit-log` |
 
 ## Estrutura
 
@@ -21,7 +23,8 @@ backend/
 ├── cluster.js              # Disponibilidade: fork de workers
 ├── server.js               # App Express + helmet + rotas
 ├── database.js             # Catálogo (Map em memória)
-├── usersDb.js              # SQLite com tabela users (slide 17)
+├── usersDb.js              # SQLite com tabelas users, customers, audit_log
+├── dbMasking.js            # (3º ciclo) Funções de máscara (CPF, cartão, etc.)
 ├── middleware/
 │   ├── errorHandler.js     # Confidencialidade: redação de segredos
 │   ├── rateLimiter.js      # Disponibilidade: anti-abuso
@@ -29,7 +32,8 @@ backend/
 └── routes/
     ├── products.js         # GET / e GET /report (CPU-bound)
     ├── checkout.js         # POST / com recálculo autoritativo
-    └── auth.js             # login-vulneravel, login-seguro, me, secrets, admin
+    ├── auth.js             # login-vulneravel, login-seguro, me, secrets, admin
+    └── customers.js        # (3º ciclo) /customers + /customers/audit-log
 frontend/
 └── index.html              # Demos clicáveis para cada pilar
 ```
@@ -73,6 +77,12 @@ Abra <http://localhost:3000>.
 6. **Slides 8-10 — UX defensiva.** Preencha CPF e telefone sem digitar
    pontuação (a máscara aplica). Clique em "Enviar com confirmação"
    para ver popup + botão desabilitando.
+7. **Slides 21-22 — Data Masking + Auditoria (3º ciclo).** Logue como
+   `aluno` na seção JWT, vá na seção "Data Masking". Liste clientes:
+   CPF e cartão aparecem mascarados. Tente "Revelar" — ignorado.
+   Faça logout, logue como `professor`, repita. Agora "Revelar" mostra
+   dados completos. Clique em "Ver log de auditoria" para ver a
+   trilha de acessos.
 
 ## Endpoints
 
@@ -88,6 +98,9 @@ Abra <http://localhost:3000>.
 | GET  | `/api/me` | **slide 16** — exige Bearer token |
 | GET  | `/api/secrets` | RBAC: aluno vê só as próprias notas |
 | GET  | `/api/admin` | só `role=professor` |
+| GET  | `/api/customers` | **slide 21** — dados mascarados |
+| GET  | `/api/customers?reveal=true` | **slide 21** — completo (só professor, auditado) |
+| GET  | `/api/customers/audit-log` | **slide 22** — log forense |
 
 ## Usuários pré-cadastrados (banco zera a cada restart)
 
